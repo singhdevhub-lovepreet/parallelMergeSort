@@ -1,44 +1,36 @@
-#include <vector>
-#include <thread>
-#include <mutex>
+#include "parallelMergeSort.hpp"
 
-class ParallelMergeSort{
+ParallelMergeSort::ParallelMergeSort(std::vector<int> *nums) 
+    : nums(nums){
+}
 
-    private:
-        std::vector<int> *nums;
-        std::mutex(sorting_lock);
-    
-    public: 
-        ParallelMergeSort(std::vector<int> *nums){
-            this->nums = nums;
-        }
+ParallelMergeSort::~ParallelMergeSort() {}
 
-        ~ParallelMergeSort(){}
-        void sort();
-        void recursiveSort(int left, int right);
+void ParallelMergeSort::recursiveSort(int left, int right) {
 
-};
+    const int THRESHOLD = 100;
 
-void ParallelMergeSort::recursiveSort(int left, int right){
-    // Change the condition to check if left is greater than right
-    std::unique_lock<std::mutex> lock(sorting_lock);
-    if(left >= right){ // Corrected condition
+    if (right - left < THRESHOLD) {
+        std::sort(nums->begin() + left, nums->begin() + right + 1);
         return;
     }
-    int mid = left + (right-left)/2;
+    
+    if (left >= right) {
+        return;
+    }
+    int mid = left + (right - left) / 2;
 
-    std::thread thread_1([this, left, mid] { recursiveSort(left, mid); });
-    std::thread thread_2([this, mid, right] { recursiveSort(mid+1, right); });
+    std::thread thread_1([this, left, mid] { this->recursiveSort(left, mid); });
+    std::thread thread_2([this, mid, right] { this->recursiveSort(mid + 1, right); });
     thread_1.join();
     thread_2.join();
 
     std::vector<int> result;
-    
     int i = left;
-    int j = mid + 1; // Corrected to start j from mid + 1
-    
-    while(i <= mid && j <= right){
-        if((*nums)[i] <= (*nums)[j]){ // Corrected to dereference nums
+    int j = mid + 1;
+
+    while (i <= mid && j <= right) {
+        if ((*nums)[i] <= (*nums)[j]) {
             result.push_back((*nums)[i]);
             i++;
         } else {
@@ -47,31 +39,26 @@ void ParallelMergeSort::recursiveSort(int left, int right){
         }
     }
 
-    // Add remaining elements from left half
-    while(i <= mid){
+    while (i <= mid) {
         result.push_back((*nums)[i]);
         i++;
     }
 
-    // Add remaining elements from right half
-    while(j <= right){
+    while (j <= right) {
         result.push_back((*nums)[j]);
         j++;
     }
-    
-    // Copy sorted elements back to the original vector
-    for(int k = 0; k < result.size(); k++){
+
+    for (int k = 0; k < result.size(); k++) {
         (*nums)[left + k] = result[k];
     }
-    lock.unlock();
 }
 
-
-void ParallelMergeSort::sort(){
-    if((*nums).size() ==0 ){
+void ParallelMergeSort::sort() {
+    if ((*nums).size() == 0) {
         exit(1);
     }
 
-    std::thread thread_1([this] { recursiveSort(0, (*nums).size() - 1); });
+    std::thread thread_1([this] { this->recursiveSort(0, (*nums).size() - 1); });
     thread_1.join();
 }
